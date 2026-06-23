@@ -23,7 +23,7 @@ class Disciplina(DisciplinaBase):
     id_disciplina: int
 
 
-@router.post("", response_model=Disciplina, status_code=201)
+@router.post("", response_model=Disciplina, status_code=201, summary="Cria uma disciplina")
 def create_disciplina(payload: DisciplinaCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -36,13 +36,13 @@ def create_disciplina(payload: DisciplinaCreate, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Disciplina])
+@router.get("", response_model=list[Disciplina], summary="Lista todas as disciplinas")
 def list_disciplina(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM disciplina ORDER BY id_disciplina")
     return cursor.fetchall()
 
 
-@router.get("/{id_disciplina}", response_model=Disciplina)
+@router.get("/{id_disciplina}", response_model=Disciplina, summary="Busca uma disciplina pelo ID")
 def get_disciplina(id_disciplina: int, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM disciplina WHERE id_disciplina = %s", (id_disciplina,))
     row = cursor.fetchone()
@@ -51,7 +51,7 @@ def get_disciplina(id_disciplina: int, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{id_disciplina}", response_model=Disciplina)
+@router.put("/{id_disciplina}", response_model=Disciplina, summary="Atualiza uma disciplina")
 def update_disciplina(id_disciplina: int, payload: DisciplinaBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -68,7 +68,7 @@ def update_disciplina(id_disciplina: int, payload: DisciplinaBase, cursor=Depend
     return row
 
 
-@router.delete("/{id_disciplina}", status_code=204)
+@router.delete("/{id_disciplina}", status_code=204, summary="Remove uma disciplina")
 def delete_disciplina(id_disciplina: int, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM disciplina WHERE id_disciplina = %s", (id_disciplina,))
     if cursor.rowcount == 0:

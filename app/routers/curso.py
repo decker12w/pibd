@@ -26,7 +26,7 @@ class Curso(CursoBase):
     id_curso: int
 
 
-@router.post("", response_model=Curso, status_code=201)
+@router.post("", response_model=Curso, status_code=201, summary="Cria um curso")
 def create_curso(payload: CursoCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -39,13 +39,13 @@ def create_curso(payload: CursoCreate, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Curso])
+@router.get("", response_model=list[Curso], summary="Lista todos os cursos")
 def list_curso(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM curso ORDER BY id_curso")
     return cursor.fetchall()
 
 
-@router.get("/{id_curso}", response_model=Curso)
+@router.get("/{id_curso}", response_model=Curso, summary="Busca um curso pelo ID")
 def get_curso(id_curso: int, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM curso WHERE id_curso = %s", (id_curso,))
     row = cursor.fetchone()
@@ -54,7 +54,7 @@ def get_curso(id_curso: int, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{id_curso}", response_model=Curso)
+@router.put("/{id_curso}", response_model=Curso, summary="Atualiza um curso")
 def update_curso(id_curso: int, payload: CursoBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -73,7 +73,7 @@ def update_curso(id_curso: int, payload: CursoBase, cursor=Depends(get_db_cursor
     return row
 
 
-@router.delete("/{id_curso}", status_code=204)
+@router.delete("/{id_curso}", status_code=204, summary="Remove um curso")
 def delete_curso(id_curso: int, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM curso WHERE id_curso = %s", (id_curso,))
     if cursor.rowcount == 0:

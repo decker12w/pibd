@@ -18,7 +18,9 @@ class DepartamentoDisciplinaUpdate(BaseModel):
     tipo: str
 
 
-@router.post("", response_model=DepartamentoDisciplina, status_code=201)
+@router.post(
+    "", response_model=DepartamentoDisciplina, status_code=201, summary="Vincula uma disciplina a um departamento"
+)
 def create_departamento_disciplina(payload: DepartamentoDisciplina, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -31,13 +33,15 @@ def create_departamento_disciplina(payload: DepartamentoDisciplina, cursor=Depen
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[DepartamentoDisciplina])
+@router.get("", response_model=list[DepartamentoDisciplina], summary="Lista todos os vínculos departamento/disciplina")
 def list_departamento_disciplina(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM departamento_disciplina ORDER BY id_disciplina, id_departamento")
     return cursor.fetchall()
 
 
-@router.get("/{id_disciplina}/{id_departamento}", response_model=DepartamentoDisciplina)
+@router.get(
+    "/{id_disciplina}/{id_departamento}", response_model=DepartamentoDisciplina, summary="Busca um vínculo específico"
+)
 def get_departamento_disciplina(id_disciplina: int, id_departamento: int, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"SELECT {COLUMNS} FROM departamento_disciplina WHERE id_disciplina = %s AND id_departamento = %s",
@@ -49,7 +53,9 @@ def get_departamento_disciplina(id_disciplina: int, id_departamento: int, cursor
     return row
 
 
-@router.put("/{id_disciplina}/{id_departamento}", response_model=DepartamentoDisciplina)
+@router.put(
+    "/{id_disciplina}/{id_departamento}", response_model=DepartamentoDisciplina, summary="Atualiza o tipo do vínculo"
+)
 def update_departamento_disciplina(
     id_disciplina: int, id_departamento: int, payload: DepartamentoDisciplinaUpdate, cursor=Depends(get_db_cursor)
 ):
@@ -68,7 +74,7 @@ def update_departamento_disciplina(
     return row
 
 
-@router.delete("/{id_disciplina}/{id_departamento}", status_code=204)
+@router.delete("/{id_disciplina}/{id_departamento}", status_code=204, summary="Remove um vínculo")
 def delete_departamento_disciplina(id_disciplina: int, id_departamento: int, cursor=Depends(get_db_cursor)):
     cursor.execute(
         "DELETE FROM departamento_disciplina WHERE id_disciplina = %s AND id_departamento = %s",

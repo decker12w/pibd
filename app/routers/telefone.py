@@ -13,7 +13,7 @@ class Telefone(BaseModel):
     numero: str
 
 
-@router.post("", response_model=Telefone, status_code=201)
+@router.post("", response_model=Telefone, status_code=201, summary="Cadastra um telefone para uma pessoa")
 def create_telefone(payload: Telefone, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -26,13 +26,13 @@ def create_telefone(payload: Telefone, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Telefone])
+@router.get("", response_model=list[Telefone], summary="Lista todos os telefones")
 def list_telefone(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM telefone ORDER BY cpf, numero")
     return cursor.fetchall()
 
 
-@router.get("/{cpf}/{numero}", response_model=Telefone)
+@router.get("/{cpf}/{numero}", response_model=Telefone, summary="Busca um telefone pelo CPF e número")
 def get_telefone(cpf: str, numero: str, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM telefone WHERE cpf = %s AND numero = %s", (cpf, numero))
     row = cursor.fetchone()
@@ -41,7 +41,7 @@ def get_telefone(cpf: str, numero: str, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.delete("/{cpf}/{numero}", status_code=204)
+@router.delete("/{cpf}/{numero}", status_code=204, summary="Remove um telefone")
 def delete_telefone(cpf: str, numero: str, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM telefone WHERE cpf = %s AND numero = %s", (cpf, numero))
     if cursor.rowcount == 0:

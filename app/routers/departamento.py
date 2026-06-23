@@ -22,7 +22,7 @@ class Departamento(DepartamentoBase):
     id_departamento: int
 
 
-@router.post("", response_model=Departamento, status_code=201)
+@router.post("", response_model=Departamento, status_code=201, summary="Cria um departamento")
 def create_departamento(payload: DepartamentoCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -35,13 +35,13 @@ def create_departamento(payload: DepartamentoCreate, cursor=Depends(get_db_curso
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Departamento])
+@router.get("", response_model=list[Departamento], summary="Lista todos os departamentos")
 def list_departamento(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM departamento ORDER BY id_departamento")
     return cursor.fetchall()
 
 
-@router.get("/{id_departamento}", response_model=Departamento)
+@router.get("/{id_departamento}", response_model=Departamento, summary="Busca um departamento pelo ID")
 def get_departamento(id_departamento: int, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM departamento WHERE id_departamento = %s", (id_departamento,))
     row = cursor.fetchone()
@@ -50,7 +50,7 @@ def get_departamento(id_departamento: int, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{id_departamento}", response_model=Departamento)
+@router.put("/{id_departamento}", response_model=Departamento, summary="Atualiza um departamento")
 def update_departamento(id_departamento: int, payload: DepartamentoBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -67,7 +67,7 @@ def update_departamento(id_departamento: int, payload: DepartamentoBase, cursor=
     return row
 
 
-@router.delete("/{id_departamento}", status_code=204)
+@router.delete("/{id_departamento}", status_code=204, summary="Remove um departamento")
 def delete_departamento(id_departamento: int, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM departamento WHERE id_departamento = %s", (id_departamento,))
     if cursor.rowcount == 0:

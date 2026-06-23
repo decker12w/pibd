@@ -26,7 +26,7 @@ class Avaliacao(AvaliacaoBase):
     id_avaliacao: int
 
 
-@router.post("", response_model=Avaliacao, status_code=201)
+@router.post("", response_model=Avaliacao, status_code=201, summary="Lança uma avaliação (nota)")
 def create_avaliacao(payload: AvaliacaoCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -39,13 +39,13 @@ def create_avaliacao(payload: AvaliacaoCreate, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Avaliacao])
+@router.get("", response_model=list[Avaliacao], summary="Lista todas as avaliações")
 def list_avaliacao(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM avaliacao ORDER BY id_avaliacao")
     return cursor.fetchall()
 
 
-@router.get("/{id_avaliacao}", response_model=Avaliacao)
+@router.get("/{id_avaliacao}", response_model=Avaliacao, summary="Busca uma avaliação pelo ID")
 def get_avaliacao(id_avaliacao: int, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM avaliacao WHERE id_avaliacao = %s", (id_avaliacao,))
     row = cursor.fetchone()
@@ -54,7 +54,7 @@ def get_avaliacao(id_avaliacao: int, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{id_avaliacao}", response_model=Avaliacao)
+@router.put("/{id_avaliacao}", response_model=Avaliacao, summary="Atualiza uma avaliação")
 def update_avaliacao(id_avaliacao: int, payload: AvaliacaoBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -71,7 +71,7 @@ def update_avaliacao(id_avaliacao: int, payload: AvaliacaoBase, cursor=Depends(g
     return row
 
 
-@router.delete("/{id_avaliacao}", status_code=204)
+@router.delete("/{id_avaliacao}", status_code=204, summary="Remove uma avaliação")
 def delete_avaliacao(id_avaliacao: int, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM avaliacao WHERE id_avaliacao = %s", (id_avaliacao,))
     if cursor.rowcount == 0:

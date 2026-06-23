@@ -22,7 +22,7 @@ class Professor(ProfessorBase):
     cpf: str
 
 
-@router.post("", response_model=Professor, status_code=201)
+@router.post("", response_model=Professor, status_code=201, summary="Cria um professor")
 def create_professor(payload: ProfessorCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -35,13 +35,13 @@ def create_professor(payload: ProfessorCreate, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Professor])
+@router.get("", response_model=list[Professor], summary="Lista todos os professores")
 def list_professor(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM professor ORDER BY cpf")
     return cursor.fetchall()
 
 
-@router.get("/{cpf}", response_model=Professor)
+@router.get("/{cpf}", response_model=Professor, summary="Busca um professor pelo CPF")
 def get_professor(cpf: str, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM professor WHERE cpf = %s", (cpf,))
     row = cursor.fetchone()
@@ -50,7 +50,7 @@ def get_professor(cpf: str, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{cpf}", response_model=Professor)
+@router.put("/{cpf}", response_model=Professor, summary="Atualiza um professor")
 def update_professor(cpf: str, payload: ProfessorBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -67,7 +67,7 @@ def update_professor(cpf: str, payload: ProfessorBase, cursor=Depends(get_db_cur
     return row
 
 
-@router.delete("/{cpf}", status_code=204)
+@router.delete("/{cpf}", status_code=204, summary="Remove um professor")
 def delete_professor(cpf: str, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM professor WHERE cpf = %s", (cpf,))
     if cursor.rowcount == 0:

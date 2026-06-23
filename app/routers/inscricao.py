@@ -31,7 +31,7 @@ class AprovadoResponse(BaseModel):
     aprovado: bool
 
 
-@router.post("", response_model=Inscricao, status_code=201)
+@router.post("", response_model=Inscricao, status_code=201, summary="Cria uma inscrição (matrícula)")
 def create_inscricao(payload: InscricaoCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -44,13 +44,13 @@ def create_inscricao(payload: InscricaoCreate, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Inscricao])
+@router.get("", response_model=list[Inscricao], summary="Lista todas as inscrições")
 def list_inscricao(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM inscricao ORDER BY id_inscricao")
     return cursor.fetchall()
 
 
-@router.get("/{id_inscricao}", response_model=Inscricao)
+@router.get("/{id_inscricao}", response_model=Inscricao, summary="Busca uma inscrição pelo ID")
 def get_inscricao(id_inscricao: int, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM inscricao WHERE id_inscricao = %s", (id_inscricao,))
     row = cursor.fetchone()
@@ -59,7 +59,7 @@ def get_inscricao(id_inscricao: int, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{id_inscricao}", response_model=Inscricao)
+@router.put("/{id_inscricao}", response_model=Inscricao, summary="Atualiza uma inscrição")
 def update_inscricao(id_inscricao: int, payload: InscricaoBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -77,14 +77,22 @@ def update_inscricao(id_inscricao: int, payload: InscricaoBase, cursor=Depends(g
     return row
 
 
-@router.delete("/{id_inscricao}", status_code=204)
+@router.delete("/{id_inscricao}", status_code=204, summary="Remove uma inscrição")
 def delete_inscricao(id_inscricao: int, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM inscricao WHERE id_inscricao = %s", (id_inscricao,))
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="Inscrição não encontrada")
 
 
-@router.get("/{id_inscricao}/aprovado", response_model=AprovadoResponse)
+@router.get(
+    "/{id_inscricao}/aprovado",
+    response_model=AprovadoResponse,
+    summary="Verifica se o aluno foi aprovado nessa inscrição",
+    description=(
+        "Chama a function `aluno_aprovado` já existente no banco: aprovado exige média >= 6.0, frequência >= 75 "
+        "e status diferente de 'Cancelada'/'Trancada'. 404 se a inscrição não existir."
+    ),
+)
 def verificar_aprovacao(id_inscricao: int, cursor=Depends(get_db_cursor)):
     cursor.execute("SELECT 1 FROM inscricao WHERE id_inscricao = %s", (id_inscricao,))
     if cursor.fetchone() is None:

@@ -22,7 +22,7 @@ class TurmaSalaUpdate(BaseModel):
     horariofim: time
 
 
-@router.post("", response_model=TurmaSala, status_code=201)
+@router.post("", response_model=TurmaSala, status_code=201, summary="Agenda uma turma em uma sala")
 def create_turma_sala(payload: TurmaSala, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -35,13 +35,15 @@ def create_turma_sala(payload: TurmaSala, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[TurmaSala])
+@router.get("", response_model=list[TurmaSala], summary="Lista todos os agendamentos de sala")
 def list_turma_sala(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM turma_sala ORDER BY id_turma, id_sala, horarioinicio")
     return cursor.fetchall()
 
 
-@router.get("/{id_turma}/{id_sala}/{horarioinicio}/{diasemana}", response_model=TurmaSala)
+@router.get(
+    "/{id_turma}/{id_sala}/{horarioinicio}/{diasemana}", response_model=TurmaSala, summary="Busca um agendamento específico"
+)
 def get_turma_sala(id_turma: int, id_sala: int, horarioinicio: time, diasemana: str, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -56,7 +58,11 @@ def get_turma_sala(id_turma: int, id_sala: int, horarioinicio: time, diasemana: 
     return row
 
 
-@router.put("/{id_turma}/{id_sala}/{horarioinicio}/{diasemana}", response_model=TurmaSala)
+@router.put(
+    "/{id_turma}/{id_sala}/{horarioinicio}/{diasemana}",
+    response_model=TurmaSala,
+    summary="Atualiza o horário de fim de um agendamento",
+)
 def update_turma_sala(
     id_turma: int,
     id_sala: int,
@@ -87,7 +93,9 @@ def update_turma_sala(
     return row
 
 
-@router.delete("/{id_turma}/{id_sala}/{horarioinicio}/{diasemana}", status_code=204)
+@router.delete(
+    "/{id_turma}/{id_sala}/{horarioinicio}/{diasemana}", status_code=204, summary="Remove um agendamento de sala"
+)
 def delete_turma_sala(id_turma: int, id_sala: int, horarioinicio: time, diasemana: str, cursor=Depends(get_db_cursor)):
     cursor.execute(
         """

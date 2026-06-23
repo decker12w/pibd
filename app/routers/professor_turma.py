@@ -13,7 +13,7 @@ class ProfessorTurma(BaseModel):
     id_turma: int
 
 
-@router.post("", response_model=ProfessorTurma, status_code=201)
+@router.post("", response_model=ProfessorTurma, status_code=201, summary="Vincula um professor a uma turma")
 def create_professor_turma(payload: ProfessorTurma, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -26,13 +26,13 @@ def create_professor_turma(payload: ProfessorTurma, cursor=Depends(get_db_cursor
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[ProfessorTurma])
+@router.get("", response_model=list[ProfessorTurma], summary="Lista todos os vínculos professor/turma")
 def list_professor_turma(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM professor_turma ORDER BY id_professor, id_turma")
     return cursor.fetchall()
 
 
-@router.get("/{id_professor}/{id_turma}", response_model=ProfessorTurma)
+@router.get("/{id_professor}/{id_turma}", response_model=ProfessorTurma, summary="Busca um vínculo específico")
 def get_professor_turma(id_professor: int, id_turma: int, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"SELECT {COLUMNS} FROM professor_turma WHERE id_professor = %s AND id_turma = %s",
@@ -44,7 +44,7 @@ def get_professor_turma(id_professor: int, id_turma: int, cursor=Depends(get_db_
     return row
 
 
-@router.delete("/{id_professor}/{id_turma}", status_code=204)
+@router.delete("/{id_professor}/{id_turma}", status_code=204, summary="Remove um vínculo professor/turma")
 def delete_professor_turma(id_professor: int, id_turma: int, cursor=Depends(get_db_cursor)):
     cursor.execute(
         "DELETE FROM professor_turma WHERE id_professor = %s AND id_turma = %s",

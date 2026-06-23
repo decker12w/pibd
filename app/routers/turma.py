@@ -38,7 +38,7 @@ class EncerrarTurmaResponse(BaseModel):
     mensagens: list[str]
 
 
-@router.post("", response_model=Turma, status_code=201)
+@router.post("", response_model=Turma, status_code=201, summary="Cria uma turma")
 def create_turma(payload: TurmaCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -51,13 +51,13 @@ def create_turma(payload: TurmaCreate, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Turma])
+@router.get("", response_model=list[Turma], summary="Lista todas as turmas")
 def list_turma(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM turma ORDER BY id_turma")
     return cursor.fetchall()
 
 
-@router.get("/{id_turma}", response_model=Turma)
+@router.get("/{id_turma}", response_model=Turma, summary="Busca uma turma pelo ID")
 def get_turma(id_turma: int, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM turma WHERE id_turma = %s", (id_turma,))
     row = cursor.fetchone()
@@ -66,7 +66,7 @@ def get_turma(id_turma: int, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{id_turma}", response_model=Turma)
+@router.put("/{id_turma}", response_model=Turma, summary="Atualiza uma turma")
 def update_turma(id_turma: int, payload: TurmaBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -84,14 +84,19 @@ def update_turma(id_turma: int, payload: TurmaBase, cursor=Depends(get_db_cursor
     return row
 
 
-@router.delete("/{id_turma}", status_code=204)
+@router.delete("/{id_turma}", status_code=204, summary="Remove uma turma")
 def delete_turma(id_turma: int, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM turma WHERE id_turma = %s", (id_turma,))
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="Turma não encontrada")
 
 
-@router.get("/{id_turma}/alunos", response_model=list[AlunoTurma])
+@router.get(
+    "/{id_turma}/alunos",
+    response_model=list[AlunoTurma],
+    summary="Lista os alunos de uma turma e seus status",
+    description="Retorna RA, nome, status e frequência de cada aluno inscrito na turma, via join inscricao/aluno/pessoa.",
+)
 def list_alunos_turma(id_turma: int, cursor=Depends(get_db_cursor)):
     cursor.execute("SELECT 1 FROM turma WHERE id_turma = %s", (id_turma,))
     if cursor.fetchone() is None:
@@ -111,7 +116,17 @@ def list_alunos_turma(id_turma: int, cursor=Depends(get_db_cursor)):
     return cursor.fetchall()
 
 
-@router.post("/{id_turma}/encerrar", response_model=EncerrarTurmaResponse)
+@router.post(
+    "/{id_turma}/encerrar",
+    response_model=EncerrarTurmaResponse,
+    summary="Encerra uma turma",
+    description=(
+        "Chama a procedure `encerrar_turma` já existente no banco: aprova (status -> 'Concluída') ou reprova "
+        "(status -> 'Reprovada') todas as inscrições 'Ativas' da turma, com base na function aluno_aprovado. "
+        "As mensagens RAISE NOTICE emitidas pela procedure (quem foi aprovado/reprovado) são retornadas em "
+        "`mensagens`."
+    ),
+)
 def encerrar_turma(id_turma: int, cursor=Depends(get_db_cursor)):
     conn = cursor.connection
     conn.notices.clear()

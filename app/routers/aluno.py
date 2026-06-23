@@ -47,7 +47,7 @@ def _check_aluno_by_ra_or_404(ra: str, cursor) -> None:
         raise HTTPException(status_code=404, detail="Aluno não encontrado")
 
 
-@router.post("", response_model=Aluno, status_code=201)
+@router.post("", response_model=Aluno, status_code=201, summary="Cria um aluno")
 def create_aluno(payload: AlunoCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -60,13 +60,13 @@ def create_aluno(payload: AlunoCreate, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Aluno])
+@router.get("", response_model=list[Aluno], summary="Lista todos os alunos")
 def list_aluno(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM aluno ORDER BY cpf")
     return cursor.fetchall()
 
 
-@router.get("/{cpf}", response_model=Aluno)
+@router.get("/{cpf}", response_model=Aluno, summary="Busca um aluno pelo CPF")
 def get_aluno(cpf: str, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM aluno WHERE cpf = %s", (cpf,))
     row = cursor.fetchone()
@@ -75,7 +75,7 @@ def get_aluno(cpf: str, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{cpf}", response_model=Aluno)
+@router.put("/{cpf}", response_model=Aluno, summary="Atualiza um aluno")
 def update_aluno(cpf: str, payload: AlunoBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -92,14 +92,19 @@ def update_aluno(cpf: str, payload: AlunoBase, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.delete("/{cpf}", status_code=204)
+@router.delete("/{cpf}", status_code=204, summary="Remove um aluno")
 def delete_aluno(cpf: str, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM aluno WHERE cpf = %s", (cpf,))
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="Aluno não encontrado")
 
 
-@router.get("/ra/{ra}/turmas", response_model=list[TurmaAluno])
+@router.get(
+    "/ra/{ra}/turmas",
+    response_model=list[TurmaAluno],
+    summary="Lista as turmas de um aluno",
+    description="Retorna todas as turmas em que o aluno (identificado pelo RA) já se inscreveu, com status e frequência de cada inscrição.",
+)
 def list_turmas_aluno(ra: str, cursor=Depends(get_db_cursor)):
     _check_aluno_by_ra_or_404(ra, cursor)
 
@@ -117,7 +122,12 @@ def list_turmas_aluno(ra: str, cursor=Depends(get_db_cursor)):
     return cursor.fetchall()
 
 
-@router.get("/ra/{ra}/turmas/{id_turma}/avaliacoes", response_model=list[AvaliacaoAluno])
+@router.get(
+    "/ra/{ra}/turmas/{id_turma}/avaliacoes",
+    response_model=list[AvaliacaoAluno],
+    summary="Lista as notas de um aluno em uma turma",
+    description="Retorna as avaliações (notas) lançadas para a inscrição do aluno (RA) na turma informada. 404 se o aluno não existir ou não estiver inscrito nessa turma.",
+)
 def list_avaliacoes_aluno_turma(ra: str, id_turma: int, cursor=Depends(get_db_cursor)):
     _check_aluno_by_ra_or_404(ra, cursor)
 

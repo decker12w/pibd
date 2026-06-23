@@ -24,7 +24,7 @@ class Endereco(EnderecoBase):
     id_endereco: int
 
 
-@router.post("", response_model=Endereco, status_code=201)
+@router.post("", response_model=Endereco, status_code=201, summary="Cria um endereço")
 def create_endereco(payload: EnderecoCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -37,13 +37,13 @@ def create_endereco(payload: EnderecoCreate, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Endereco])
+@router.get("", response_model=list[Endereco], summary="Lista todos os endereços")
 def list_endereco(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM endereco ORDER BY id_endereco")
     return cursor.fetchall()
 
 
-@router.get("/{id_endereco}", response_model=Endereco)
+@router.get("/{id_endereco}", response_model=Endereco, summary="Busca um endereço pelo ID")
 def get_endereco(id_endereco: int, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM endereco WHERE id_endereco = %s", (id_endereco,))
     row = cursor.fetchone()
@@ -52,7 +52,7 @@ def get_endereco(id_endereco: int, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{id_endereco}", response_model=Endereco)
+@router.put("/{id_endereco}", response_model=Endereco, summary="Atualiza um endereço")
 def update_endereco(id_endereco: int, payload: EnderecoBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -70,7 +70,7 @@ def update_endereco(id_endereco: int, payload: EnderecoBase, cursor=Depends(get_
     return row
 
 
-@router.delete("/{id_endereco}", status_code=204)
+@router.delete("/{id_endereco}", status_code=204, summary="Remove um endereço")
 def delete_endereco(id_endereco: int, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM endereco WHERE id_endereco = %s", (id_endereco,))
     if cursor.rowcount == 0:

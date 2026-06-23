@@ -21,7 +21,7 @@ class Sala(SalaBase):
     id_sala: int
 
 
-@router.post("", response_model=Sala, status_code=201)
+@router.post("", response_model=Sala, status_code=201, summary="Cria uma sala")
 def create_sala(payload: SalaCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -34,13 +34,13 @@ def create_sala(payload: SalaCreate, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Sala])
+@router.get("", response_model=list[Sala], summary="Lista todas as salas")
 def list_sala(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM sala ORDER BY id_sala")
     return cursor.fetchall()
 
 
-@router.get("/{id_sala}", response_model=Sala)
+@router.get("/{id_sala}", response_model=Sala, summary="Busca uma sala pelo ID")
 def get_sala(id_sala: int, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM sala WHERE id_sala = %s", (id_sala,))
     row = cursor.fetchone()
@@ -49,7 +49,7 @@ def get_sala(id_sala: int, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{id_sala}", response_model=Sala)
+@router.put("/{id_sala}", response_model=Sala, summary="Atualiza uma sala")
 def update_sala(id_sala: int, payload: SalaBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -66,7 +66,7 @@ def update_sala(id_sala: int, payload: SalaBase, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.delete("/{id_sala}", status_code=204)
+@router.delete("/{id_sala}", status_code=204, summary="Remove uma sala")
 def delete_sala(id_sala: int, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM sala WHERE id_sala = %s", (id_sala,))
     if cursor.rowcount == 0:

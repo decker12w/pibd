@@ -26,7 +26,7 @@ class Pessoa(PessoaBase):
     cpf: str
 
 
-@router.post("", response_model=Pessoa, status_code=201)
+@router.post("", response_model=Pessoa, status_code=201, summary="Cria uma pessoa")
 def create_pessoa(payload: PessoaCreate, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -39,13 +39,13 @@ def create_pessoa(payload: PessoaCreate, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Pessoa])
+@router.get("", response_model=list[Pessoa], summary="Lista todas as pessoas")
 def list_pessoa(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM pessoa ORDER BY cpf")
     return cursor.fetchall()
 
 
-@router.get("/{cpf}", response_model=Pessoa)
+@router.get("/{cpf}", response_model=Pessoa, summary="Busca uma pessoa pelo CPF")
 def get_pessoa(cpf: str, cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM pessoa WHERE cpf = %s", (cpf,))
     row = cursor.fetchone()
@@ -54,7 +54,7 @@ def get_pessoa(cpf: str, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.put("/{cpf}", response_model=Pessoa)
+@router.put("/{cpf}", response_model=Pessoa, summary="Atualiza uma pessoa")
 def update_pessoa(cpf: str, payload: PessoaBase, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -72,7 +72,7 @@ def update_pessoa(cpf: str, payload: PessoaBase, cursor=Depends(get_db_cursor)):
     return row
 
 
-@router.delete("/{cpf}", status_code=204)
+@router.delete("/{cpf}", status_code=204, summary="Remove uma pessoa")
 def delete_pessoa(cpf: str, cursor=Depends(get_db_cursor)):
     cursor.execute("DELETE FROM pessoa WHERE cpf = %s", (cpf,))
     if cursor.rowcount == 0:

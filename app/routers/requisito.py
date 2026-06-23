@@ -13,7 +13,7 @@ class Requisito(BaseModel):
     id_requisito: int
 
 
-@router.post("", response_model=Requisito, status_code=201)
+@router.post("", response_model=Requisito, status_code=201, summary="Cadastra um pré-requisito entre disciplinas")
 def create_requisito(payload: Requisito, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"""
@@ -26,13 +26,13 @@ def create_requisito(payload: Requisito, cursor=Depends(get_db_cursor)):
     return cursor.fetchone()
 
 
-@router.get("", response_model=list[Requisito])
+@router.get("", response_model=list[Requisito], summary="Lista todos os pré-requisitos")
 def list_requisito(cursor=Depends(get_db_cursor)):
     cursor.execute(f"SELECT {COLUMNS} FROM requisito ORDER BY id_disciplina, id_requisito")
     return cursor.fetchall()
 
 
-@router.get("/{id_disciplina}/{id_requisito}", response_model=Requisito)
+@router.get("/{id_disciplina}/{id_requisito}", response_model=Requisito, summary="Busca um pré-requisito específico")
 def get_requisito(id_disciplina: int, id_requisito: int, cursor=Depends(get_db_cursor)):
     cursor.execute(
         f"SELECT {COLUMNS} FROM requisito WHERE id_disciplina = %s AND id_requisito = %s",
@@ -44,7 +44,7 @@ def get_requisito(id_disciplina: int, id_requisito: int, cursor=Depends(get_db_c
     return row
 
 
-@router.delete("/{id_disciplina}/{id_requisito}", status_code=204)
+@router.delete("/{id_disciplina}/{id_requisito}", status_code=204, summary="Remove um pré-requisito")
 def delete_requisito(id_disciplina: int, id_requisito: int, cursor=Depends(get_db_cursor)):
     cursor.execute(
         "DELETE FROM requisito WHERE id_disciplina = %s AND id_requisito = %s",
