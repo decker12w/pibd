@@ -1436,8 +1436,6 @@ EXECUTE FUNCTION fn_validar_status_avaliacao();
 --
 -- =============================================================================
 -- EXEMPLOS DE TESTE
-
---
 -- =============================================================================
 -- Testar FUNCTION 1: média de notas da inscrição 1
 -- SELECT calcular_media_aluno(1);
@@ -1451,41 +1449,54 @@ EXECUTE FUNCTION fn_validar_status_avaliacao();
 -- CALL lancar_nota(20, 15, 8.5, 'Prova Final');
 -- Testar PROCEDURE 3: encerrar turma
 -- CALL encerrar_turma(1);
--- Testar TRIGGER 1: tentativa de exceder capacidade (deve falhar se turma
--- cheia)
+-- Testar TRIGGER 1: tentativa de exceder capacidade (deve falhar se turma cheia)
 -- INSERT INTO inscricao VALUES (99, 1, '758010', 'Ativa', CURRENT_DATE);
+
 -- Testar TRIGGER 2:
 -- Cria uma nova turma de Cálculo I (disciplina 2)
 INSERT INTO turma VALUES (11, 2, 40, 2025, 2);
+
 -- (a) deve FALHAR: o aluno 758003 tem inscrição 'Concluída' na disciplina 2
-INSERT INTO inscricao (id_inscricao, id_turma, ra, status, dataInscricao,
-frequencia)
-VALUES (16, 11, '758003', 'Ativa', CURRENT_DATE, 100);
+DO $$
+BEGIN
+    INSERT INTO inscricao (id_inscricao, id_turma, ra, status, dataInscricao, frequencia)
+    VALUES (16, 11, '758003', 'Ativa', CURRENT_DATE, 100);
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE '[Esperado] Trigger 2a bloqueou corretamente: %', SQLERRM;
+END;
+$$;
+
 -- (b) deve FUNCIONAR: 758003 ainda não concluiu a disciplina 5 (turma 5)
-INSERT INTO inscricao (id_inscricao, id_turma, ra, status, dataInscricao,
-frequencia)
+INSERT INTO inscricao (id_inscricao, id_turma, ra, status, dataInscricao, frequencia)
 VALUES (17, 5, '758003', 'Ativa', CURRENT_DATE, 100);
-SELECT id_inscricao, id_turma, ra,
--- Testar TRIGGER 3: tentativa de deletar inscrição ativa (deve falhar)
--- Inscrição 50 = 'Ativa' | Inscrição 51 = 'Cancelada' (aluno 758010, livre nas
--- turmas 9 e 10)
-INSERT INTO inscricao (id_inscricao, id_turma, ra, status, dataInscricao,
-frequencia)
+
+-- Testar TRIGGER 3:
+-- Inscrição 50 = 'Ativa' | Inscrição 51 = 'Cancelada' (aluno 758010, livre nas turmas 9 e 10)
+INSERT INTO inscricao (id_inscricao, id_turma, ra, status, dataInscricao, frequencia)
 VALUES (50, 10, '758010', 'Ativa', CURRENT_DATE, 100)
 ON CONFLICT (id_inscricao) DO NOTHING;
-INSERT INTO inscricao (id_inscricao, id_turma, ra, status, dataInscricao,
-frequencia)
-VALUES (51, 9, '758010', 'Cancelada', CURRENT_DATE, 100)
 
+INSERT INTO inscricao (id_inscricao, id_turma, ra, status, dataInscricao, frequencia)
+VALUES (51, 9, '758010', 'Cancelada', CURRENT_DATE, 100)
 ON CONFLICT (id_inscricao) DO NOTHING;
+
 -- (a) deve FALHAR pelo trigger: inscrição 51 está 'Cancelada'
-INSERT INTO avaliacao (id_avaliacao, id_inscricao, nota, tipo, dataLancamento)
-VALUES (60, 51, 7.0, 'Prova 1', CURRENT_DATE);
+DO $$
+BEGIN
+    INSERT INTO avaliacao (id_avaliacao, id_inscricao, nota, tipo, dataLancamento)
+    VALUES (60, 51, 7.0, 'Prova 1', CURRENT_DATE);
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE '[Esperado] Trigger 3a bloqueou corretamente: %', SQLERRM;
+END;
+$$;
+
 -- (b) deve FUNCIONAR: inscrição 50 está 'Ativa'
 INSERT INTO avaliacao (id_avaliacao, id_inscricao, nota, tipo, dataLancamento)
 VALUES (61, 50, 7.0, 'Prova Extra', CURRENT_DATE);
-SELECT id_avaliacao, id_inscricao, nota, tipo FROM avaliacao WHERE id_avaliacao
-IN (60, 61);
+
+SELECT id_avaliacao, id_inscricao, nota, tipo FROM avaliacao WHERE id_avaliacao IN (60, 61);
 
 -- =============================================================================
 -- CONSULTAS SQL E TRIGGERS  - Entrega Final
