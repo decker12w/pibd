@@ -46,13 +46,14 @@ Makefile                # comandos de atalho
 ## Banco de dados
 
 ```bash
-make db-up      # sobe o Postgres
-make db-reset   # recria o volume do zero e roda o banco.sql automaticamente
+make up         # sobe o Postgres (sempre do zero) e inicia a API
+make db-up      # sobe apenas o Postgres (sempre do zero)
+make db-down    # para o Postgres
 make db-logs    # acompanha os logs do container
 make psql       # abre um psql dentro do container, já no banco banco_pibd
 ```
 
-O `banco.sql` é montado em `/docker-entrypoint-initdb.d/`, então só é executado automaticamente quando o volume está **vazio** (primeira inicialização). Se o volume já existir com dados antigos, use `make db-reset` para recriá-lo.
+`make db-up` sempre derruba o volume e recria o banco do zero, executando o `banco.sql` automaticamente.
 
 > O `banco.sql` contém, propositalmente, alguns `INSERT`s de teste que devem falhar (para validar triggers). Isso é esperado e não impede a criação das tabelas — todo o schema, seeds, functions, procedures e triggers já foram aplicados antes desses testes.
 

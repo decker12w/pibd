@@ -1,4 +1,4 @@
-.PHONY: help install db-up db-down db-reset db-logs psql run up
+.PHONY: help install db-up db-down db-logs psql run up
 
 help:
 	@echo "make install   - instala as dependencias com uv"
@@ -14,14 +14,11 @@ install:
 	uv sync
 
 db-up:
+	docker compose down -v
 	docker compose up -d
 
 db-down:
 	docker compose down
-
-db-reset:
-	docker compose down -v
-	docker compose up -d
 
 db-logs:
 	docker compose logs -f db
