@@ -1486,3 +1486,391 @@ INSERT INTO avaliacao (id_avaliacao, id_inscricao, nota, tipo, dataLancamento)
 VALUES (61, 50, 7.0, 'Prova Extra', CURRENT_DATE);
 SELECT id_avaliacao, id_inscricao, nota, tipo FROM avaliacao WHERE id_avaliacao
 IN (60, 61);
+
+-- =============================================================================
+-- CONSULTAS SQL E TRIGGERS  - Entrega Final
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- CONSULTA 1: Boletim completo de um aluno
+--
+-- Entidades: pessoa, aluno, inscricao, turma, disciplina, avaliacao
+-- Relacionamentos:
+--   aluno →(fk_aluno_pessoa)→ pessoa
+--   inscricao →(fk_inscricao_aluno)→ aluno
+--   inscricao →(fk_inscricao_turma)→ turma
+--   turma →(fk_turma_disciplina)→ disciplina
+--   avaliacao →(fk_avaliacao_inscricao)→ inscricao
+--
+-- Mostra, para cada disciplina cursada pelo aluno, o ano/semestre,
+-- o status da inscrição, a frequência e a média das notas.
+-- Filtramos por RA, mas a query funciona para qualquer aluno.
+-- -----------------------------------------------------------------------------
+
+SELECT
+    p.nome AS aluno,
+    a.ra,
+    d.titulo AS disciplina,
+    t.ano,
+    t.semestre,
+    i.status,
+    i.frequencia AS frequencia_pct,
+    ROUND(AVG(av.nota), 2) AS media_notas
+FROM pessoa p
+JOIN aluno a ON a.cpf = p.cpf
+JOIN inscricao i ON i.ra = a.ra
+JOIN turma t ON t.id_turma = i.id_turma
+JOIN disciplina d ON d.id_disciplina = t.id_disciplina
+LEFT JOIN avaliacao av ON av.id_inscricao = i.id_inscricao
+GROUP BY
+    p.nome, a.ra, d.titulo,
+    t.ano, t.semestre,
+    i.status, i.frequencia
+ORDER BY
+    p.nome, t.ano DESC, t.semestre DESC, d.titulo;
+
+
+-- -----------------------------------------------------------------------------
+-- CONSULTA 2: Carga de trabalho dos professores por departamento
+--
+-- Entidades: pessoa, professor, departamento, professor_turma, turma, disciplina
+-- Relacionamentos:
+--   professor →(fk_professor_pessoa)→ pessoa
+--   professor →(fk_professor_departamento)→ departamento
+--   professor_turma →(fk_profturma_professor)→ professor
+--   professor_turma →(fk_profturma_turma)→ turma
+--   turma →(fk_turma_disciplina)→ disciplina
+--
+-- Mostra quantas turmas e disciplinas distintas cada professor ministra,
+-- agrupado por departamento. Útil para relatórios de gestão acadêmica.
+-- -----------------------------------------------------------------------------
+
+SELECT
+    dep.nome AS departamento,
+    p.nome AS professor,
+    prof.titulo AS titulacao,
+    COUNT(DISTINCT pt.id_turma) AS total_turmas,
+    COUNT(DISTINCT t.id_disciplina) AS disciplinas_distintas,
+    STRING_AGG(DISTINCT d.titulo, ', ' ORDER BY d.titulo) AS lista_disciplinas
+FROM pessoa p
+JOIN professor prof  ON prof.cpf = p.cpf
+JOIN departamento dep ON dep.id_departamento = prof.id_departamento
+JOIN professor_turma pt ON pt.id_professor  = prof.id_professor
+JOIN turma t ON t.id_turma = pt.id_turma
+JOIN disciplina d ON d.id_disciplina = t.id_disciplina
+GROUP BY
+    dep.nome, p.nome, prof.titulo
+ORDER BY
+    dep.nome, total_turmas DESC;
+
+
+-- -----------------------------------------------------------------------------
+-- CONSULTA 3: Turmas com ocupação acima de 50% da capacidade
+--
+-- Entidades: disciplina, turma, inscricao, sala, turma_sala
+-- Relacionamentos:
+--   turma →(fk_turma_disciplina)→ disciplina
+--   inscricao →(fk_inscricao_turma)→ turma
+--   turma_sala →(fk_turmasala_turma)→ turma
+--   turma_sala →(fk_turmasala_sala)→ sala
+--
+-- Calcula a taxa de ocupação (alunos ativos / capacidade da turma) e
+-- lista apenas as turmas com mais de 50 % de ocupação, informando a
+-- sala principal e o horário. Ajuda na gestão de espaço físico.
+-- -----------------------------------------------------------------------------
+
+SELECT
+    d.titulo AS disciplina,
+    t.id_turma,
+    t.ano,
+    t.semestre,
+    t.capacidadeMaxima AS capacidade,
+    COUNT(i.id_inscricao) FILTER (WHERE i.status = 'Ativa') AS alunos_ativos,
+    ROUND(COUNT(i.id_inscricao) FILTER (WHERE i.status = 'Ativa')* 100.0 / t.capacidadeMaxima, 1) AS ocupacao_pct,
+    s.localizacao AS sala_principal,
+    ts.diaSemana AS dia,
+    ts.horarioInicio AS inicio
+FROM turma t
+JOIN disciplina d ON d.id_disciplina = t.id_disciplina
+LEFT JOIN inscricao i ON i.id_turma = t.id_turma
+LEFT JOIN turma_sala ts ON ts.id_turma = t.id_turma
+LEFT JOIN sala s ON s.id_sala = ts.id_sala
+GROUP BY
+    d.titulo, t.id_turma, t.ano, t.semestre,
+    t.capacidadeMaxima, s.localizacao,
+    ts.diaSemana, ts.horarioInicio
+HAVING
+    COUNT(i.id_inscricao) FILTER (WHERE i.status = 'Ativa') > t.capacidadeMaxima * 0.5
+ORDER BY
+    ocupacao_pct DESC;
+
+
+-- -----------------------------------------------------------------------------
+-- CONSULTA 4: Alunos em risco de reprovação (frequência < 75 ou média < 6)
+--
+-- Entidades: pessoa, aluno, inscricao, turma, disciplina, avaliacao
+-- Relacionamentos:
+--   aluno →(fk_aluno_pessoa)→ pessoa
+--   inscricao →(fk_inscricao_aluno)→ aluno
+--   inscricao →(fk_inscricao_turma)→ turma
+--   turma →(fk_turma_disciplina)→ disciplina
+--   avaliacao →(fk_avaliacao_inscricao)→ inscricao
+--
+-- Lista somente inscrições 'Ativas' onde o aluno já está em risco,
+-- indicando qual critério está sendo violado. Útil para ações preventivas
+-- da coordenação acadêmica.
+-- -----------------------------------------------------------------------------
+
+SELECT
+    p.nome AS aluno,
+    a.ra,
+    d.titulo AS disciplina,
+    t.ano,
+    t.semestre,
+    i.frequencia AS frequencia_pct,
+    ROUND(AVG(av.nota), 2) AS media_atual,
+    CASE
+        WHEN i.frequencia < 75
+             AND ROUND(AVG(av.nota), 2) < 6.0 THEN 'Frequência e Nota'
+        WHEN i.frequencia < 75 THEN 'Frequência'
+        WHEN ROUND(AVG(av.nota), 2) < 6.0 THEN 'Nota'
+    END AS risco_por
+FROM pessoa p
+JOIN aluno a ON a.cpf = p.cpf
+JOIN inscricao i ON i.ra = a.ra
+JOIN turma t ON t.id_turma = i.id_turma
+JOIN disciplina d ON d.id_disciplina = t.id_disciplina
+LEFT JOIN avaliacao av ON av.id_inscricao = i.id_inscricao
+WHERE
+    i.status = 'Ativa'
+GROUP BY
+    p.nome, a.ra, d.titulo,
+    t.ano, t.semestre, i.frequencia
+HAVING
+    i.frequencia < 75 OR ROUND(AVG(av.nota), 2) < 6.0
+ORDER BY
+    risco_por, p.nome;
+
+
+-- =============================================================================
+-- TRIGGERS ADICIONAIS (4 novos)
+-- Os 3 já existentes são:
+--   tg_verificar_capacidade_inscricao
+--   tg_impedir_rematricula_disciplina_concluida
+--   tg_validar_status_avaliacao
+-- =============================================================================
+
+
+-- -----------------------------------------------------------------------------
+-- TRIGGER 4: Registrar data de atualização de status da inscrição
+--
+-- Evento : BEFORE UPDATE em inscricao (quando status muda)
+-- Tabela : log_status_inscricao (criada abaixo)
+-- Ação   : insere uma linha de auditoria com o status anterior e o novo,
+--          o RA do aluno, o id_turma e o momento da mudança.
+--
+-- Justificativa: rastrear a evolução do ciclo de vida de cada matrícula
+-- é essencial para auditorias, emissão de declarações e resolução de
+-- disputas acadêmicas. Sem esse log, o histórico de transições de status
+-- fica perdido (o banco só guarda o valor atual).
+-- -----------------------------------------------------------------------------
+
+-- Tabela de log necessária para o trigger 4
+CREATE TABLE IF NOT EXISTS log_status_inscricao (
+    id_log SERIAL PRIMARY KEY,
+    id_inscricao INT NOT NULL,
+    ra VARCHAR(20) NOT NULL,
+    id_turma INT NOT NULL,
+    status_anterior VARCHAR(30) NOT NULL,
+    status_novo VARCHAR(30) NOT NULL,
+    alterado_em TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION fn_log_mudanca_status_inscricao()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Só registra quando o status realmente mudou
+    IF NEW.status <> OLD.status THEN
+        INSERT INTO log_status_inscricao
+            (id_inscricao, ra, id_turma, status_anterior, status_novo)
+        VALUES
+            (OLD.id_inscricao, OLD.ra, OLD.id_turma, OLD.status, NEW.status);
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tg_log_mudanca_status_inscricao ON inscricao;
+CREATE TRIGGER tg_log_mudanca_status_inscricao
+BEFORE UPDATE OF status ON inscricao
+FOR EACH ROW
+EXECUTE FUNCTION fn_log_mudanca_status_inscricao();
+
+-- Exemplo de teste:
+-- UPDATE inscricao SET status = 'Concluída' WHERE id_inscricao = 1;
+-- SELECT * FROM log_status_inscricao;
+
+
+-- -----------------------------------------------------------------------------
+-- TRIGGER 5: Impedir exclusão de professor vinculado a turmas ativas
+--
+-- Evento : BEFORE DELETE em professor
+-- Ação   : aborta a exclusão se o professor ainda tiver vínculos na tabela
+--          professor_turma referentes a turmas do período corrente
+--          (ano = EXTRACT(YEAR FROM CURRENT_DATE)).
+--
+-- Justificativa: a FK fk_profturma_professor já usa ON DELETE RESTRICT, o
+-- que impede a exclusão enquanto houver qualquer linha em professor_turma.
+-- Este trigger vai além: emite uma mensagem de erro explicativa, listando
+-- quantas turmas ativas o professor possui, facilitando a ação corretiva
+-- pelo usuário. Turmas de períodos anteriores não bloqueiam a exclusão,
+-- pois o vínculo histórico pode ser mantido na tabela professor_turma
+-- mesmo sem o professor ativo no sistema.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION fn_impedir_exclusao_professor_ativo()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_turmas_ativas INT;
+    v_ano_atual     INT := EXTRACT(YEAR FROM CURRENT_DATE)::INT;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_turmas_ativas
+    FROM professor_turma pt
+    JOIN turma t ON t.id_turma = pt.id_turma
+    WHERE pt.id_professor = OLD.id_professor
+      AND t.ano = v_ano_atual;
+
+    IF v_turmas_ativas > 0 THEN
+        RAISE EXCEPTION
+            'Não é possível excluir o professor % (id: %): ele possui % turma(s) ativa(s) no ano corrente (%).',
+            (SELECT nome FROM pessoa WHERE cpf = OLD.cpf),
+            OLD.id_professor,
+            v_turmas_ativas,
+            v_ano_atual;
+    END IF;
+
+    RETURN OLD; -- libera a exclusão quando não há turmas no ano corrente
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tg_impedir_exclusao_professor_ativo ON professor;
+CREATE TRIGGER tg_impedir_exclusao_professor_ativo
+BEFORE DELETE ON professor
+FOR EACH ROW
+EXECUTE FUNCTION fn_impedir_exclusao_professor_ativo();
+
+-- Exemplo de teste (deve falhar — professor 101 ministra turmas em 2025):
+-- DELETE FROM professor WHERE id_professor = 101;
+
+
+-- -----------------------------------------------------------------------------
+-- TRIGGER 6: Impedir conflito de horário na mesma sala
+--
+-- Evento : BEFORE INSERT em turma_sala
+-- Ação   : verifica se já existe outra turma alocada na mesma sala,
+--          no mesmo dia da semana e com sobreposição de horário.
+--          Se sim, aborta a inserção com mensagem detalhada.
+--
+-- Justificativa: o modelo atual não impede que duas turmas sejam alocadas
+-- na mesma sala simultaneamente — a PK (id_turma, id_sala, horarioInicio,
+-- diaSemana) impede duplicatas exatas, mas não sobreposições parciais de
+-- horário (ex.: uma turma das 08:00–10:00 e outra das 09:00–11:00 na
+-- mesma sala passariam pela PK). Este trigger fecha essa lacuna verificando
+-- a interseção dos intervalos de horário.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION fn_verificar_conflito_sala()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_conflito_turma INT;
+BEGIN
+    SELECT ts.id_turma
+    INTO v_conflito_turma
+    FROM turma_sala ts
+    WHERE ts.id_sala      = NEW.id_sala
+      AND ts.diaSemana    = NEW.diaSemana
+      AND ts.id_turma    <> NEW.id_turma   -- ignora a própria turma em updates
+      -- Sobreposição: o intervalo existente começa antes do fim do novo
+      --               E termina depois do início do novo
+      AND ts.horarioInicio < NEW.horarioFim
+      AND ts.horarioFim   > NEW.horarioInicio
+    LIMIT 1;
+
+    IF FOUND THEN
+        RAISE EXCEPTION
+            'Conflito de horário: sala % já está ocupada na % por outra turma (id_turma=%) no intervalo solicitado (%–%).',
+            NEW.id_sala,
+            NEW.diaSemana,
+            v_conflito_turma,
+            NEW.horarioInicio,
+            NEW.horarioFim;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tg_verificar_conflito_sala ON turma_sala;
+CREATE TRIGGER tg_verificar_conflito_sala
+BEFORE INSERT ON turma_sala
+FOR EACH ROW
+EXECUTE FUNCTION fn_verificar_conflito_sala();
+
+-- Exemplo de teste (deve falhar — sala 1 já ocupada na Segunda das 08:00–10:00):
+-- INSERT INTO turma_sala VALUES (3, 1, '09:00', '11:00', 'Segunda');
+-- Exemplo de teste (deve funcionar — sala diferente):
+-- INSERT INTO turma_sala VALUES (3, 2, '09:00', '11:00', 'Segunda');
+
+
+-- -----------------------------------------------------------------------------
+-- TRIGGER 7: Atualizar automaticamente o status da inscrição para 'Reprovada'
+--            quando a frequência cair abaixo de 75
+--
+-- Evento : BEFORE UPDATE em inscricao (quando frequencia muda)
+-- Ação   : se a inscrição está 'Ativa' e a nova frequência for < 75,
+--          altera o status para 'Reprovada' automaticamente, impedindo
+--          que o aluno continue constando como ativo mesmo já reprovado
+--          por falta.
+--
+-- Justificativa: a regra de aprovação exige frequência mínima de 75 %.
+-- Sem este trigger, um professor precisaria encerrar manualmente cada
+-- inscrição após o lançamento da frequência final, abrindo espaço para
+-- inconsistências (aluno com frequência 30 % e status 'Ativo'). O trigger
+-- automatiza a transição, garantindo consistência imediata e ativando
+-- também o trigger 4 (log de status) em cascata, pois este retorna NEW
+-- com status alterado.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION fn_reprovar_por_falta()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Aplica somente a inscrições Ativas cuja frequência caiu abaixo do mínimo
+    IF NEW.status = 'Ativa' AND NEW.frequencia < 75 THEN
+        NEW.status := 'Reprovada';
+        RAISE NOTICE
+            'Inscrição % (RA %, turma %): status alterado automaticamente para "Reprovada" por frequência insuficiente (%).',
+            NEW.id_inscricao, NEW.ra, NEW.id_turma, NEW.frequencia;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tg_reprovar_por_falta ON inscricao;
+CREATE TRIGGER tg_reprovar_por_falta
+BEFORE UPDATE OF frequencia ON inscricao
+FOR EACH ROW
+EXECUTE FUNCTION fn_reprovar_por_falta();
+
+-- Exemplo de teste (deve mudar status para 'Reprovada' automaticamente):
+-- UPDATE inscricao SET frequencia = 60 WHERE id_inscricao = 9;
+-- SELECT id_inscricao, status, frequencia FROM inscricao WHERE id_inscricao = 9;
+-- O log_status_inscricao também registrará a mudança (via trigger 4).
